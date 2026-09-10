@@ -16,6 +16,30 @@ use App\Http\Controllers\AuthController;
 |
 */
 
+Route::get('/', function () {
+    return response()->json([
+        'message' => 'Tree Folder API',
+        'version' => '1.0',
+        'endpoints' => [
+            'auth' => [
+                'POST /api/auth/login',
+                'POST /api/auth/register',
+                'GET /api/auth/profile',
+                'POST /api/auth/logout',
+            ],
+            'folders' => [
+                'GET /api/listFolder',
+                'POST /api/createFolder',
+                'DELETE /api/delete-folder/{id}',
+            ],
+            'cabinets' => [
+                'GET /api/cabinet',
+                'POST /api/cabinet',
+            ]
+        ]
+    ]);
+});
+
 /* Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 }); */
