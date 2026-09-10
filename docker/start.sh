@@ -3,6 +3,9 @@
 # Set working directory
 cd /var/www/html
 
+# Remove existing .env if it exists to avoid conflicts
+rm -f .env
+
 # Create .env file from environment variables
 cat > .env <<EOF
 APP_ENV=${APP_ENV:-production}
@@ -10,7 +13,7 @@ APP_DEBUG=${APP_DEBUG:-false}
 APP_KEY=${APP_KEY}
 APP_URL=${APP_URL:-http://localhost}
 
-DB_CONNECTION=${DB_CONNECTION:-sqlite}
+DB_CONNECTION=sqlite
 
 CACHE_DRIVER=${CACHE_DRIVER:-file}
 SESSION_DRIVER=${SESSION_DRIVER:-file}
@@ -25,6 +28,9 @@ if [ ! -f database/database.sqlite ]; then
     touch database/database.sqlite
     chmod 664 database/database.sqlite
 fi
+
+# Clear config cache
+php artisan config:clear
 
 # Generate application key if not set
 if [ -z "$APP_KEY" ]; then
