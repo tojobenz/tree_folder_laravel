@@ -10,12 +10,7 @@ APP_DEBUG=${APP_DEBUG:-false}
 APP_KEY=${APP_KEY}
 APP_URL=${APP_URL:-http://localhost}
 
-DB_CONNECTION=${DB_CONNECTION:-pgsql}
-DB_HOST=${DB_HOST}
-DB_PORT=${DB_PORT}
-DB_DATABASE=${DB_DATABASE}
-DB_USERNAME=${DB_USERNAME}
-DB_PASSWORD=${DB_PASSWORD}
+DB_CONNECTION=${DB_CONNECTION:-sqlite}
 
 CACHE_DRIVER=${CACHE_DRIVER:-file}
 SESSION_DRIVER=${SESSION_DRIVER:-file}
@@ -24,6 +19,12 @@ QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
 ADMINEMAIL=${ADMINEMAIL:-admin@example.com}
 SOCIETENAME="${SOCIETENAME:-Ma Société}"
 EOF
+
+# Create SQLite database if it doesn't exist
+if [ ! -f database/database.sqlite ]; then
+    touch database/database.sqlite
+    chmod 664 database/database.sqlite
+fi
 
 # Generate application key if not set
 if [ -z "$APP_KEY" ]; then
