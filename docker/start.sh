@@ -22,7 +22,7 @@ QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
 ADMINEMAIL=${ADMINEMAIL:-admin@example.com}
 SOCIETENAME="${SOCIETENAME:-Ma Société}"
 
-JWT_SECRET=${JWT_SECRET}
+JWT_SECRET=${JWT_SECRET:-default_jwt_secret_key_change_in_production}
 EOF
 
 # Create SQLite database if it doesn't exist
