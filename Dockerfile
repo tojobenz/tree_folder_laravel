@@ -30,7 +30,7 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader
 
 # Install Node.js and npm
-RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs
 
 # Install npm dependencies and build assets
@@ -50,8 +50,12 @@ RUN chown -R www-data:www-data /var/www/html \
 # Copy nginx configuration
 COPY docker/nginx/default.conf /etc/nginx/sites-available/default
 
+# Copy start script
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
 # Expose port 80
 EXPOSE 80
 
-# Start nginx and php-fpm
-CMD service php8.2-fpm start && nginx -g 'daemon off;'
+# Start using the script
+CMD ["/usr/local/bin/start.sh"]
