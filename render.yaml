@@ -22,3 +22,5 @@ services:
         value: admin@example.com
       - key: SOCIETENAME
         value: "Ma Société"
+      - key: JWT_SECRET
+        generateValue: true
