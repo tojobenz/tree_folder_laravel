@@ -10,6 +10,7 @@ use App\Helpers\EmailHelper;
 use Illuminate\Support\Facades\Redirect;
 use Response;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\UploadFileRequest;
 
 class FolderController extends Controller
 {
@@ -138,136 +139,185 @@ public function sendEmail(Request $request) {
 
 }
 
-public function uploadFile(Request $request) {
-    $file = $request->file('file');
-    $filename = str_replace(' ', '_', $request->file('file')->getClientOriginalName());
-    $path = public_path() . '/'. $request->path;
-    $file->move($path, $filename);
+public function uploadFile(UploadFileRequest $request) {
+    try {
+        $file = $request->file('file');
+        
+        $filename = $request->sanitizeFilename($file->getClientOriginalName());
+        
+        $path = $request->sanitizePath($request->path);
+        $fullPath = public_path() . $path;
 
-    $data ['filename'] = $request->file('file')->getClientOriginalName(); // pathinfo($filename, PATHINFO_FILENAME);
-    $data ['fileExtension'] = $file->getClientOriginalExtension();
-    $key = env('ADMINEMAIL');
-    $societe = env('SOCIETENAME');
-                    // send email with the template
-                    $mailToSend = [$key];
-                    $data['msg'] = $request->msg;
-                    $data['path'] = $request->path. '/'.  $request->file('file')->getClientOriginalName();
-                    return EmailHelper::sendMail(
-                        'emails.upload',
-                        $data,
-                        $key,
-                        $societe, $mailToSend);
-            
-                   if ( count(Mail::failures()) > 0) {
-                    return response()->json([
-                        'error' => true,
-                        'message' => 'Une erreur technique est survenue lors de l’envoi de l’email'
-                    ]);   }else{
-    
-                        return response()->json([
-                            'success' => true,
-                            'message' => 'Un email de confirmation vous est envoyez !'
-                        ]);
-                    }  
+        // repository creation 
+        if (!File::exists($fullPath)) {
+            File::makeDirectory($fullPath, 0755, true, true);
+        }
+
+        // move file
+        $file->move($fullPath, $filename);
+
+        $data['filename'] = $file->getClientOriginalName();
+        $data['fileExtension'] = $file->getClientOriginalExtension();
+        $data['filePath'] = $path . '/' . $filename;
+
+        $key = env('ADMINEMAIL');
+        $societe = env('SOCIETENAME', 'Ma Société');
+        
+        if (!empty($key) && filter_var($key, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $mailToSend = [$key];
+                $data['msg'] = $request->get('msg', '');
+                $data['path'] = $data['filePath'];
+                
+                EmailHelper::sendMail(
+                    'emails.upload',
+                    $data,
+                    $key,
+                    $societe,
+                    $mailToSend
+                );
+            } catch (\Exception $e) {
+                // Log upload failed
+                \Log::error('Email sending failed: ' . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fichier uploadé avec succès',
+            'data' => [
+                'filename' => $data['filename'],
+                'path' => $data['filePath']
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de l\'upload: ' . $e->getMessage()
+        ], 500);
+    }
 }
 
 
 public function downloadFile($path) {
-    $file = public_path().'/'. str_replace('|', '/', $path);///. '.pdf';
-    $headers = array('Content-Type: application/pdf',);
+    $sanitizedPath = str_replace('|', '/', $path);
+    $file = public_path() . '/' . $sanitizedPath;
 
-    if (is_file($file)) {
-        return Response::make(file_get_contents($file));
-    } else {
-        return;
+    if (!is_file($file)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Fichier non trouvé'
+        ], 404);
     }
 
+    $mimeType = mime_content_type($file);
+    if ($mimeType === false) {
+        $extension = pathinfo($file, PATHINFO_EXTENSION);
+        $mimeTypes = [
+            'pdf' => 'application/pdf',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'bmp' => 'image/bmp',
+            'webp' => 'image/webp',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt' => 'text/plain',
+        ];
+        $mimeType = $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
+    }
 
-    //return Response::download($file, 'cv.pdf', $headers);
-    //return Response::download($file);
-   
+    $fileName = basename($file);
+
+    return response()->file($file, ['Content-Type' => $mimeType]);
 }
 
 public function showPdf($path) {
-    $file = public_path().'/'. str_replace('|', '/', $path. '.pdf');///. '.pdf';
-    $headers = array('Content-Type: application/pdf',);
-    if (is_file($file)) {
-        return Response::make(file_get_contents($file));
-    } else {
-        return;
+    $sanitizedPath = str_replace('|', '/', $path);
+    $file = public_path() . '/' . $sanitizedPath;
+
+    if (!is_file($file)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Fichier non trouvé'
+        ], 404);
     }
 
+    $mimeType = mime_content_type($file);
+    if ($mimeType === false) {
+        $extension = pathinfo($file, PATHINFO_EXTENSION);
+        $mimeTypes = [
+            'pdf' => 'application/pdf',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'bmp' => 'image/bmp',
+            'webp' => 'image/webp',
+        ];
+        $mimeType = $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
+    }
+
+    return response()->file($file, ['Content-Type' => $mimeType]);
 }
-
-public function modifyFile() {
-    rename(public_path('/images/player_icons/Ajax.png'), public_path('/images/player_icons/test.png'));
-}
-public function findFolder() {
-    //$files = Storage::disk('public')->files($directory);
-
-// Recursive...
-$files =  Storage::disk('public')->exists('Dossier_1');
-return  $files;
-
-}
-
 
 public function updateFolder($id, Request $request)
 { 
     $input = $request->all();                     
-      $obj_user = Folder::find($id);
-      if($request->exists('title')) { 
+    $obj_user = Folder::find($id);
+    if($request->exists('title')) { 
         $obj_user->title =  $input['title'];
         $obj_user->path =  $input['path'];
         $obj_user->save();
         rename(public_path($input['oldpath']), public_path($input['path']));
-    
-          
-      } else {
+    } else {
         $obj_user->path =  $input['path'];
         $obj_user->save();
-        //rename(public_path($input['oldpath']), public_path($input['path']));
-    
-      }
+    }
 
-    $success = true;
-    $message = 'Folder update successfully';
-    $response = [
-        'success' => $success,
-        'message' => $message,
-    ]; 
-    return response()->json($message);
+    return response()->json([
+        'success' => true,
+        'message' => 'Dossier mis à jour avec succès'
+    ]);
 }
+
 public function deleteFolder($id) {
     $folder = Folder::find($id);
     $folder->delete();
     Folder::where('parent',$id)->delete();
 
-    return response()->json('The folder successfully deleted');
-
-
+    return response()->json([
+        'success' => true,
+        'message' => 'Dossier supprimé avec succès'
+    ]);
 }
+
 public function deleteFolderCabinet($id) {
     Folder::where('cabinet_id',$id)->delete();
 
-    return response()->json('The folder successfully deleted');
-
-
+    return response()->json([
+        'success' => true,
+        'message' => 'Dossiers du cabinet supprimés avec succès'
+    ]);
 }
+
 public function removeFolder(Request $request) {
     $input = $request->all();   
     $folderPath = public_path($request->path);
     if($request->isFolder == 0) {
         File::delete(public_path($request->path));
-        return response()->json('The folder successfully deleted'); 
-    
+        return response()->json([
+            'success' => true,
+            'message' => 'Fichier supprimé avec succès'
+        ]); 
     } else {
         File::deleteDirectory(public_path($request->path));
-        return response()->json('The folder successfully deleted'); 
-    
+        return response()->json([
+            'success' => true,
+            'message' => 'Dossier supprimé avec succès'
+        ]); 
     }
-
-
-
 }
 }

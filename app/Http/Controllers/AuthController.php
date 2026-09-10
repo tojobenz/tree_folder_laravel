@@ -59,31 +59,31 @@ class AuthController extends Controller
  
 
         $key = env('ADMINEMAIL');
-        $societe = env('SOCIETENAME');
-                        // send email with the template
-                        $mailToSend = [$key, $request->email];
-                        $data['mdp'] = $request->password;
-                        $data['mail'] = $request->email;
-                        return EmailHelper::sendMail(
-                            'emails.register',
-                            $data,
-                            $mailToSend,
-                            $societe, $mailToSend);
-                
-                       if ( count(Mail::failures()) > 0) {
-                        return response()->json([
-                            'error' => true,
-                            'message' => 'Une erreur technique est survenue lors de l’envoi de l’email'
-                        ]);   }else{
+        $societe = env('SOCIETENAME', 'Ma Société');
         
-                            return response()->json([
-                                'success' => true,
-                                'message' => 'Un email de confirmation vous est envoyez !'
-                            ]);
-                        }  
+        // confirm email
+        if (!empty($key) && filter_var($key, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $mailToSend = [$key, $request->email];
+                $data['mdp'] = $request->password;
+                $data['mail'] = $request->email;
+                
+                EmailHelper::sendMail(
+                    'emails.register',
+                    $data,
+                    $key, // main mail
+                    $societe, 
+                    $mailToSend // mail to send
+                );
+            } catch (\Exception $e) {
+
+                \Log::error('Registration email sending failed: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
-            'message' => 'User successfully registered',
+            'success' => true,
+            'message' => 'Utilisateur enregistré avec succès',
             'user' => $user
         ], 201);
     }
@@ -192,64 +192,66 @@ class AuthController extends Controller
         {     */       
           $user_id = Auth::User()->id;                       
           $obj_user = User::find($id);
+          
           if($request->exists('password')) {
-
             $obj_user->password =  Hash::make($input['password']);
             $obj_user->name =  $input['name'];
             $obj_user->email =  $input['email'];
             $obj_user->save(); 
+            
+            // email notif
             $key = env('ADMINEMAIL');
-            $societe = env('SOCIETENAME');
-                            // send email with the template
-                            $mailToSend = [$key, $input['email']];
-                            $data['mdp'] = $input['password'];
-                            $data['mail'] = $input['email'];
-                            $data['name'] = $input['name'];
-                            return EmailHelper::sendMail(
-                                'emails.register',
-                                $data,
-                                $mailToSend,
-                                $societe, $mailToSend);
+            $societe = env('SOCIETENAME', 'Ma Société');
+            
+            if (!empty($key) && filter_var($key, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    $mailToSend = [$key, $input['email']];
+                    $data['mdp'] = $input['password'];
+                    $data['mail'] = $input['email'];
+                    $data['name'] = $input['name'];
+                    
+                    EmailHelper::sendMail(
+                        'emails.register',
+                        $data,
+                        $key,
+                        $societe, 
+                        $mailToSend
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Update password email sending failed: ' . $e->getMessage());
+                }
+            }
           } else {
             $obj_user->name =  $input['name'];
             $obj_user->email =  $input['email'];
             $obj_user->save(); 
+            
             $key = env('ADMINEMAIL');
-            $societe = env('SOCIETENAME');
-                            // send email with the template
-                            $mailToSend = [$key, $input['email']];
-                            $data['email'] = $input['email'];
-                            $data['nom'] = $input['name'];
-                            return EmailHelper::sendMail(
-                                'emails.update',
-                                $data,
-                                $mailToSend,
-                                $societe, $mailToSend);
-          }
-                       if ( count(Mail::failures()) > 0) {
-                        return response()->json([
-                            'error' => true,
-                            'message' => 'Une erreur technique est survenue lors de l’envoi de l’email'
-                        ]);   }else{
-        
-                            return response()->json([
-                                'success' => true,
-                                'message' => 'Un email de confirmation vous est envoyez !'
-                            ]);
-                        }  
-/*         //}
-        else
-        {           
-          $error = array('current-password' => 'Please enter correct current password');
-          return response()->json(array('error' => $error), 400);   
-        } */
-        $success = true;
-        $message = 'User update successfully';
-        $response = [
-            'success' => $success,
-            'message' => $message,
-        ]; 
-        return response()->json($message);
+            $societe = env('SOCIETENAME', 'Ma Société');
+            
+            if (!empty($key) && filter_var($key, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    $mailToSend = [$key, $input['email']];
+                    $data['email'] = $input['email'];
+                    $data['nom'] = $input['name'];
+                    
+                    EmailHelper::sendMail(
+                        'emails.update',
+                        $data,
+                        $key,
+                        $societe, 
+                        $mailToSend
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Update user email sending failed: ' . $e->getMessage());
+                }
+            }
+          }  
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Utilisateur mis à jour avec succès'
+        ]);
     }
 
     public function findUser ($id) {
@@ -259,26 +261,37 @@ class AuthController extends Controller
     public function sendEmailForgot (Request $request) {
         $input = $request->all();
         $key = env('ADMINEMAIL');
-        $societe = env('SOCIETENAME');
-                        // send email with the template
-                        $mailToSend = [$key, $input['email']];
-                        $data['email'] = $input['email'];
-                        return EmailHelper::sendMail(
-                            'emails.emailForgot',
-                            $data,
-                            $mailToSend,
-                            $societe, $mailToSend);
-                            if ( count(Mail::failures()) > 0) {
-                                return response()->json([
-                                    'error' => true,
-                                    'message' => 'Une erreur technique est survenue lors de l’envoi de l’email'
-                                ]);   }else{
+        $societe = env('SOCIETENAME', 'Ma Société');
+        
+        // validation email
+        if (!isset($input['email']) || !filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Adresse email invalide'
+            ], 400);
+        }
+        
+        if (!empty($key) && filter_var($key, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $mailToSend = [$key, $input['email']];
+                $data['email'] = $input['email'];
                 
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Un email de confirmation vous est envoyez !'
-                                    ]);
-                                }  
+                EmailHelper::sendMail(
+                    'emails.emailForgot',
+                    $data,
+                    $key,
+                    $societe, 
+                    $mailToSend
+                );
+            } catch (\Exception $e) {
+                \Log::error('Forgot password email sending failed: ' . $e->getMessage());
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Email de récupération envoyé avec succès'
+        ]);
     }
 
     public function historic(Request $request) {
@@ -286,15 +299,21 @@ class AuthController extends Controller
             'name' => 'required|string',
             'ip' => 'required',
             'email' => 'required|string|email',
-            'country' => 'required|string', //'required|string|confirmed'
+            'country' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors()->toJson(), 400);
         }
-            $user = Historic::create(array_merge(
-                $validator->validated()
-            ));
+        
+        $user = Historic::create(array_merge(
+            $validator->validated()
+        ));
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Historique enregistré avec succès'
+        ]);
     }
 
     public function listHistoric() {
