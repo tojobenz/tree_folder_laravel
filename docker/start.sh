@@ -21,6 +21,8 @@ QUEUE_CONNECTION=${QUEUE_CONNECTION:-sync}
 
 ADMINEMAIL=${ADMINEMAIL:-admin@example.com}
 SOCIETENAME="${SOCIETENAME:-Ma Société}"
+
+JWT_SECRET=${JWT_SECRET:-$(openssl rand -base64 64)}
 EOF
 
 # Create SQLite database if it doesn't exist
