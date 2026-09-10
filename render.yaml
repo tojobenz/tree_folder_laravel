@@ -1,11 +1,47 @@
 services:
   - type: web
     name: laravel-app
-    runtime: php
-    env: php
+    env: docker
     plan: free
-    buildCommand: "composer install --no-dev --optimize-autoloader && npm install && npm run production && php artisan key:generate && php artisan jwt:secret && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan migrate --force"
-    startCommand: "php artisan serve --host=0.0.0.0 --port=$PORT"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: laravel-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: laravel-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: laravel-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: laravel-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: laravel-db
+          property: password
+      - key: CACHE_DRIVER
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: ADMINEMAIL
+        value: admin@example.com
+      - key: SOCIETENAME
+        value: Ma Société
     envVars:
       - key: APP_ENV
         value: production

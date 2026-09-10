@@ -1,0 +1,9 @@
+node_modules
+vendor
+storage/logs
+storage/framework/*.php
+storage/framework/cache/*.php
+.env
+.git
+.gitignore
+README.md
