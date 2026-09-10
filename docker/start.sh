@@ -9,7 +9,7 @@ rm -f .env
 # Create .env file from environment variables
 cat > .env <<EOF
 APP_ENV=${APP_ENV:-production}
-APP_DEBUG=${APP_DEBUG:-false}
+APP_DEBUG=true
 APP_KEY=${APP_KEY}
 APP_URL=${APP_URL:-http://localhost}
 
@@ -33,6 +33,9 @@ fi
 
 # Clear config cache
 php artisan config:clear
+
+# Enable error logging for debugging
+php artisan storage:link
 
 # Generate application key if not set
 if [ -z "$APP_KEY" ]; then
