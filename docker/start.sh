@@ -31,6 +31,17 @@ if [ ! -f database/database.sqlite ]; then
     chmod 664 database/database.sqlite
 fi
 
+# Set proper permissions at runtime
+chown -R www-data:www-data /var/www/html/storage
+chown -R www-data:www-data /var/www/html/bootstrap/cache
+chown -R www-data:www-data /var/www/html/database
+chown -R www-data:www-data /var/www/html/public
+chmod -R 775 /var/www/html/storage
+chmod -R 775 /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/database
+chmod -R 775 /var/www/html/public
+chmod 664 /var/www/html/database/database.sqlite
+
 # Clear config cache
 php artisan config:clear
 
