@@ -37,9 +37,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
 # Install npm dependencies and build assets
 RUN npm install && npm run production
 
-# Copy environment file
-RUN cp .env.example .env
-
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
